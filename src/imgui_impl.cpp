@@ -197,11 +197,12 @@ bool Init(lua_State *L)
 	io.GetClipboardTextFn = ImGui_Impl_GetClipboardText;
 
 	io.Fonts->TexID = NULL;
-
-	luaL_dostring(L, "love.filesystem.createDirectory('/') return love.filesystem.getSaveDirectory()");
-	const char *path = luaL_checkstring(L, 1);
+	
+	luaL_dostring(L, "love.filesystem.createDirectory('/') return love.filesystem.getSaveDirectory()");	
+	const char *path = luaL_checkstring(L, -1);
 	g_iniPath = std::string(path) + std::string("/imgui.ini");
 	io.IniFilename = g_iniPath.c_str();
+
 	return true;
 }
 
