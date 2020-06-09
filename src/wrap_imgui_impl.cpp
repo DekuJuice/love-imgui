@@ -54,6 +54,14 @@ char *strndup( const char *s1, size_t n)
 static int	g_textures[250]; // Should be enough
 static bool	g_returnValueLast = true;
 
+static int w_Init(lua_State *L)
+{
+	// Initialize imgui
+	int top = lua_gettop(L);
+	Init(L);
+	lua_settop(L, top);
+    return 0;
+}
 
 static int w_ShutDown(lua_State *L)
 {
@@ -946,6 +954,7 @@ static const struct luaL_Reg imguilib[] = {
 { "BeginChild", w_BeginChild },
 
 // Implementation
+{ "Init", w_Init},
 { "ShutDown", w_ShutDown },
 { "NewFrame", w_NewFrame },
 { "MouseMoved", w_MouseMoved },
@@ -1560,11 +1569,10 @@ extern "C" LOVE_IMGUI_EXPORT int luaopen_imgui(lua_State *L)
 	// imgui is at -2, love is at -1
 	DoStringCache::init(L, "love-imgui");
 	lua_pop(L, 1); // remove "love" table
+	
+	ImGui::CreateContext();
 
-	// Initialize imgui
-	int top = lua_gettop(L);
-	Init(L);
-	lua_settop(L, top);
+
 
 	return 1;
 }

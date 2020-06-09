@@ -58,6 +58,7 @@ local textValue = "text"
 -- LOVE callbacks
 --
 function love.load(arg)
+    imgui.Init()
 end
 
 function love.update(dt)
