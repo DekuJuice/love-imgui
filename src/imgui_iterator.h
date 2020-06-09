@@ -639,6 +639,7 @@ OPTIONAL_BOOL_POINTER_ARG(p_open)
 OPTIONAL_ENUM_ARG(flags, 0)
 CALL_FUNCTION(BeginTabItem, int, label, p_open, flags)
 PUSH_BOOL(ret)
+END_BOOL_POINTER(p_open)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
 //    IMGUI_API void           EndTabItem();
