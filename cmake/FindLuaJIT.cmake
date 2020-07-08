@@ -19,7 +19,7 @@ find_path(LUAJIT_INCLUDE_DIR
 
 find_library(LUAJIT_LIBRARY
 	NAMES luajit5.1 luajit-5.1 lua51
-	PATH_SUFFIXES lib
+	PATH_SUFFIXES lib src
 	PATHS ${LUAJIT_SEARCH_PATHS}
 )
 
