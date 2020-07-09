@@ -23,22 +23,25 @@ Or for a single flag:
 imgui.Begin("Test Window", true, "ImGuiWindowFlags_AlwaysAutoResize");
 ```
 
-It uses imgui 1.73 and is based on LÖVE 11.1.
+It uses imgui 1.77 and is based on LÖVE 11.3.
 
 ## Getting Started
 
 Build the project using CMake:
 
+###Windows
+```
+cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=%CD%/installdir -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+###Linux
 ```
 cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=$PWD/installdir -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --target install
 ```
 
-(Windows users may want to change `$PWD` with `%CD%` when running from cmd)
-
 Then copy the generated dynamic module next to your love executable or into the LÖVE application data folder (for instance "C:/Users/<user>/AppData/Roaming/LOVE" on Windows or ~/.local/shared/love on Linux).
-
-Pre-built binaries for Windows and Mas OSX are provided in the [releases](https://github.com/slages/love-imgui/releases) page.
 
 ## Examples
 

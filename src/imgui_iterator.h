@@ -1673,11 +1673,11 @@ IMGUI_FUNCTION(OpenPopup)
 LABEL_ARG(str_id)
 CALL_FUNCTION_NO_RET(OpenPopup, str_id)
 END_IMGUI_FUNC
-//    IMGUI_API bool          OpenPopupOnItemClick(const char* str_id = NULL, int mouse_button = 1);                                  // helper to open popup when clicked on last item. return true when just opened.
-IMGUI_FUNCTION(OpenPopupOnItemClick)
+//    IMGUI_API bool          OpenPopupContextItem(const char* str_id = NULL, int mouse_button = 1);                                  // helper to open popup when clicked on last item. return true when just opened.
+IMGUI_FUNCTION(OpenPopupContextItem)
 OPTIONAL_LABEL_ARG(str_id, NULL)
 OPTIONAL_INT_ARG(mouse_button, 1)
-CALL_FUNCTION(OpenPopupOnItemClick, bool, str_id, mouse_button)
+CALL_FUNCTION(OpenPopupContextItem, bool, str_id, mouse_button)
 PUSH_BOOL(ret)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
@@ -1700,39 +1700,43 @@ PUSH_BOOL(ret)
 END_BOOL_POINTER(p_open)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
-//    IMGUI_API bool          BeginPopupContextItem(const char* str_id = NULL, int mouse_button = 1);                                 // helper to open and begin popup when clicked on last item. if you can pass a NULL str_id only if the previous item had an id. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
-IMGUI_FUNCTION(BeginPopupContextItem)
-OPTIONAL_LABEL_ARG(str_id, NULL)
-OPTIONAL_INT_ARG(mouse_button, 1)
-CALL_FUNCTION(BeginPopupContextItem, bool, str_id, mouse_button)
-IF_RET_ADD_END_STACK(10)
-PUSH_BOOL(ret)
-PUSH_LAST_BOOL(ret)
-END_IMGUI_FUNC
-//    IMGUI_API bool          BeginPopupContextWindow(const char* str_id = NULL, int mouse_button = 1, bool also_over_items = true);  // helper to open and begin popup when clicked on current window.
-IMGUI_FUNCTION(BeginPopupContextWindow)
-OPTIONAL_LABEL_ARG(str_id, NULL)
-OPTIONAL_INT_ARG(mouse_button, 1)
-OPTIONAL_BOOL_ARG(also_over_items, true)
-CALL_FUNCTION(BeginPopupContextWindow, bool, str_id, mouse_button, also_over_items)
-IF_RET_ADD_END_STACK(10)
-PUSH_BOOL(ret)
-PUSH_LAST_BOOL(ret)
-END_IMGUI_FUNC
-//    IMGUI_API bool          BeginPopupContextVoid(const char* str_id = NULL, int mouse_button = 1);                                 // helper to open and begin popup when clicked in void (where there are no imgui windows).
-IMGUI_FUNCTION(BeginPopupContextVoid)
-OPTIONAL_LABEL_ARG(str_id, NULL)
-OPTIONAL_INT_ARG(mouse_button, 1)
-CALL_FUNCTION(BeginPopupContextVoid, bool, str_id, mouse_button)
-IF_RET_ADD_END_STACK(10)
-PUSH_BOOL(ret)
-PUSH_LAST_BOOL(ret)
-END_IMGUI_FUNC
+
 //    IMGUI_API void          EndPopup();
 IMGUI_FUNCTION(EndPopup)
 CALL_FUNCTION_NO_RET(EndPopup)
 POP_END_STACK(10)
 END_IMGUI_FUNC
+
+//    IMGUI_API bool          BeginPopupContextItem(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1);  // open+begin popup when clicked on last item. if you can pass a NULL str_id only if the previous item had an id. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
+IMGUI_FUNCTION(BeginPopupContextItem)
+OPTIONAL_LABEL_ARG(str_id, NULL)
+OPTIONAL_ENUM_ARG(popup_flags, 1)
+CALL_FUNCTION(BeginPopupContextItem, bool, str_id, popup_flags)
+IF_RET_ADD_END_STACK(10)
+PUSH_BOOL(ret)
+PUSH_LAST_BOOL(ret)
+END_IMGUI_FUNC
+
+//    IMGUI_API bool          BeginPopupContextWindow(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1);// open+begin popup when clicked on current window.
+IMGUI_FUNCTION(BeginPopupContextWindow)
+OPTIONAL_LABEL_ARG(str_id, NULL)
+OPTIONAL_ENUM_ARG(popup_flags, 1)
+CALL_FUNCTION(BeginPopupContextWindow, bool, str_id, popup_flags)
+IF_RET_ADD_END_STACK(10)
+PUSH_BOOL(ret)
+PUSH_LAST_BOOL(ret)
+END_IMGUI_FUNC
+
+//    IMGUI_API bool          BeginPopupContextVoid(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1);  // open+begin popup when clicked in void (where there are no windows).
+IMGUI_FUNCTION(BeginPopupContextVoid)
+OPTIONAL_LABEL_ARG(str_id, NULL)
+OPTIONAL_ENUM_ARG(popup_flags, 1)
+CALL_FUNCTION(BeginPopupContextVoid, bool, str_id, popup_flags)
+IF_RET_ADD_END_STACK(10)
+PUSH_BOOL(ret)
+PUSH_LAST_BOOL(ret)
+END_IMGUI_FUNC
+
 //    IMGUI_API bool          IsPopupOpen(const char* str_id);                                    // return true if the popup is open
 IMGUI_FUNCTION(IsPopupOpen)
 LABEL_ARG(str_id)
@@ -1895,6 +1899,12 @@ CALL_FUNCTION(IsItemDeactivatedAfterEdit, bool)
 PUSH_BOOL(ret)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
+//    IMGUI_API bool          IsItemToggledOpen();
+IMGUI_FUNCTION(IsItemToggledOpen)
+CALL_FUNCTION(IsItemToggledOpen, bool)
+PUSH_BOOL(ret)
+PUSH_LAST_BOOL(ret)
+END_IMGUI_FUNC
 //    IMGUI_API bool          IsAnyItemHovered();
 IMGUI_FUNCTION(IsAnyItemHovered)
 CALL_FUNCTION(IsAnyItemHovered, bool)
@@ -2004,17 +2014,6 @@ ENUM_ARG(idx)
 CALL_FUNCTION(GetStyleColorName, const char*, idx)
 PUSH_STRING(ret)
 PUSH_LAST_STRING(ret)
-END_IMGUI_FUNC
-//    IMGUI_API ImVec2        CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f);   // utility to find the closest point the last item bounding rectangle edge. useful to visually link items
-IMGUI_FUNCTION(CalcItemRectClosestPoint)
-IM_VEC_2_ARG(pos)
-OPTIONAL_BOOL_ARG(on_edge, false)
-OPTIONAL_NUMBER_ARG(outward, +0.0f)
-CALL_FUNCTION(CalcItemRectClosestPoint, ImVec2, pos, on_edge, outward)
-PUSH_NUMBER(ret.x)
-PUSH_NUMBER(ret.y)
-PUSH_LAST_NUMBER(ret.x)
-PUSH_LAST_NUMBER(ret.y)
 END_IMGUI_FUNC
 //    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
 IMGUI_FUNCTION(CalcTextSize)
@@ -2148,9 +2147,9 @@ CALL_FUNCTION(IsMouseReleased, bool, button)
 PUSH_BOOL(ret)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
-//    IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
+//    IMGUI_API bool          IsMouseDragging(int button, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
 IMGUI_FUNCTION(IsMouseDragging)
-OPTIONAL_INT_ARG(button, 0)
+INT_ARG(button)
 OPTIONAL_NUMBER_ARG(lock_threshold, -1.0f)
 CALL_FUNCTION(IsMouseDragging, bool, button, lock_threshold)
 PUSH_BOOL(ret)

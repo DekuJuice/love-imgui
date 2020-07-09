@@ -20,16 +20,16 @@ ENDIF()
 
 ADD_LIBRARY(love-imgui
 	SHARED
-	src/libimgui/imconfig.h
-	src/libimgui/imgui.cpp
-	src/libimgui/imgui.h
-	src/libimgui/imgui_draw.cpp
-	src/libimgui/imgui_demo.cpp
-	src/libimgui/imgui_widgets.cpp
-	src/libimgui/imgui_internal.h
-	src/libimgui/stb_rect_pack.h
-	src/libimgui/stb_textedit.h
-	src/libimgui/stb_truetype.h
+	src/imgui/imconfig.h
+	src/imgui/imgui.cpp
+	src/imgui/imgui.h
+	src/imgui/imgui_draw.cpp
+	src/imgui/imgui_demo.cpp
+	src/imgui/imgui_widgets.cpp
+	src/imgui/imgui_internal.h
+	src/imgui/imstb_rectpack.h
+	src/imgui/imstb_textedit.h
+	src/imgui/imstb_truetype.h
 	src/imgui_impl.cpp
 	src/wrap_imgui_impl.cpp
 	src/imgui_impl.h
