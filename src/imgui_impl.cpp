@@ -79,7 +79,11 @@ void ImGui_Impl_RenderDrawLists(ImDrawData* draw_data)
 			lua_pushnumber(g_L, (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
 			lua_setfield(g_L, -2, "clipHeight");
 
-			luaL_dostring(g_L, "love.graphics.setBlendMode(\"alpha\")");
+			luaL_dostring(g_L, "\
+                love.graphics.setBlendMode(\"alpha\") \
+                love.graphics.push(\"all\")\
+            ");
+            
 			if (pcmd->TextureId == NULL)
 				luaL_dostring(g_L, "imgui.renderMesh:setTexture(imgui.textureObject)");
 			else
@@ -99,7 +103,10 @@ void ImGui_Impl_RenderDrawLists(ImDrawData* draw_data)
 				love.graphics.setScissor(imgui.clipX, imgui.clipY, imgui.clipWidth, imgui.clipHeight) \
 				imgui.renderMesh:setDrawRange(imgui.vertexPosition, imgui.vertexCount) \
 				love.graphics.draw(imgui.renderMesh) \
+                love.graphics.pop() \
 			");
+            
+            
 		}
 	}
 	luaL_dostring(g_L, "love.graphics.setScissor()");
