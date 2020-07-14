@@ -333,16 +333,17 @@ END_IMGUI_FUNC
 // Unsupported arg type ImGuiStorage* tree
 //    IMGUI_API ImGuiStorage* GetStateStorage();
 // Unsupported return type ImGuiStorage*
+
 //    IMGUI_API void          PushFont(ImFont* font);                                             // use NULL as a shortcut to push default font
-// Unsupported arg type ImFont* font
-//    IMGUI_API void          PopFont();
 IMGUI_FUNCTION(PushFont)
 CALL_FUNCTION_NO_RET(PushFont, (ImFont*)lua_touserdata(L, 1))
 END_IMGUI_FUNC
 
+//    IMGUI_API void          PopFont();
 IMGUI_FUNCTION(PopFont)
 CALL_FUNCTION_NO_RET(PopFont)
 END_IMGUI_FUNC
+
 //    IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);
 IMGUI_FUNCTION(PushStyleColor)
 ENUM_ARG(idx)

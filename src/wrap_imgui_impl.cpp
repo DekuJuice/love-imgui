@@ -203,35 +203,41 @@ static int w_GetStyleColCount(lua_State *L)
 	return 1;
 }
 
-static int w_SetGlobalFontFromFileTTF(lua_State *L)
+static int w_AddFontDefault(lua_State *L)
 {
-	size_t size;
-	const char *path = luaL_checklstring(L, 1, &size);
-	float size_pixels = luaL_checknumber(L, 2);
-	float spacing_x = luaL_optnumber(L, 3, 0);
-	float spacing_y = luaL_optnumber(L, 4, 0);
-	float oversample_x = luaL_optnumber(L, 5, 1);
-	float oversample_y = luaL_optnumber(L, 6, 1);
-
-	const char* basePath = getRealDirectoryIfExists(L, path);
-	if (basePath == nullptr) {
-		lua_pushstring(L, "File does not exist.");
-		lua_error(L);
-		return 0;
-	}
-
-	char fullPath[4096] = {0};
-	sprintf(fullPath, "%s/%s", basePath, path);
-	SetGlobalFontFromFileTTF(&(fullPath[0]), size_pixels, spacing_x, spacing_y,
-							oversample_x, oversample_y);
-	lua_settop(L, 0);
-	return 0;
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->AddFontDefault();
+    return 0;
 }
 
+// AddFontFromFileTTF(filename, pixelSize, merge, glyphRange)
+// Glyph range format is the same as imgui (pairs of ints, 0 to indicate end)
 static int w_AddFontFromFileTTF(lua_State *L) {
+    
+    int max_args = lua_gettop(L);
+    
 	size_t filenameSize;
 	const char* filename = luaL_checklstring(L, 1, &filenameSize);
 	float pixelSize = luaL_checknumber(L, 2);
+    bool merge = false;
+        
+    if (max_args >= 3) {
+        merge = (bool)lua_toboolean(L, 3);        
+    }
+    
+    bool custom_ranges = false;
+    std::vector<ImWchar> glyph_ranges;
+    
+    if (max_args >= 4) {        
+        luaL_checktype(L, 4, LUA_TTABLE);
+        custom_ranges = true;
+        int len = lua_objlen(L, 4);
+        for (int i = 0; i < len; ++i) {
+            lua_pushinteger(L, i + 1);
+            lua_gettable(L, 4);
+            glyph_ranges.push_back((ImWchar)luaL_checkinteger(L, -1));
+        }
+    }
 
 	const char* basePath = getRealDirectoryIfExists(L, filename);
 	if (basePath == nullptr) {
@@ -243,16 +249,24 @@ static int w_AddFontFromFileTTF(lua_State *L) {
 	char fullPath[4096] = {0};
 	sprintf(fullPath, "%s/%s", basePath, filename);
 
-	ImFontConfig* fontCfg = (ImFontConfig*)lua_touserdata(L, 3);
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontConfig config;
+    config.MergeMode = merge;
 
-	ImGuiIO& io = ImGui::GetIO();
-	ImFont* font = io.Fonts->AddFontFromFileTTF(&(fullPath[0]), pixelSize);
+	ImFont* font = io.Fonts->AddFontFromFileTTF(
+        &(fullPath[0]),
+        pixelSize,
+        &config,
+        custom_ranges ? glyph_ranges.data() : NULL
+    );
+    io.Fonts->Build(); // We need to immediately build the font atlas before the glyph array goes out of scope
+        
 	lua_settop(L, 0);
 
 	if (font == nullptr) {
 		return luaL_error(L, "Could not load font");
 	} else {
-		lua_pushlightuserdata(L, (void*)font);
+        lua_pushlightuserdata(L, (void*)font);
 		return 1;
 	}
 }
@@ -934,7 +948,7 @@ static const struct luaL_Reg imguilib[] = {
 	// Custom
 { "GetStyleColName", w_GetStyleColorName },
 { "GetStyleColCount", w_GetStyleColCount },
-{ "SetGlobalFontFromFileTTF", w_SetGlobalFontFromFileTTF },
+{ "AddFontDefault", w_AddFontDefault },
 { "AddFontFromFileTTF", w_AddFontFromFileTTF },
 
 // Overrides
