@@ -1,23 +1,14 @@
 //struct ImDrawList
 
 //    IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
-IMGUI_FUNCTION_DRAW_LIST(PushClipRect)
-IM_VEC_2_ARG(clip_rect_min)
-IM_VEC_2_ARG(clip_rect_max)
-OPTIONAL_BOOL_ARG(intersect_with_current_clip_rect, false)
-DRAW_LIST_CALL_FUNCTION_NO_RET(PushClipRect, clip_rect_min, clip_rect_max, intersect_with_current_clip_rect)
-END_IMGUI_FUNC
-
+//Not allowed to use this function
 //    IMGUI_API void  PushClipRectFullScreen();
 IMGUI_FUNCTION_DRAW_LIST(PushClipRectFullScreen)
 DRAW_LIST_CALL_FUNCTION_NO_RET(PushClipRectFullScreen)
 END_IMGUI_FUNC
 
 //    IMGUI_API void  PopClipRect();
-IMGUI_FUNCTION_DRAW_LIST(PopClipRect)
-DRAW_LIST_CALL_FUNCTION_NO_RET(PopClipRect)
-END_IMGUI_FUNC
-
+//Not allowed to use this function
 //    IMGUI_API void  PushTextureID(ImTextureID texture_id);
 IMGUI_FUNCTION_DRAW_LIST(PushTextureID)
 TEXTURE_ARG(texture_id)

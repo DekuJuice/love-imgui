@@ -84,7 +84,8 @@ sub generateDrawListFunctions {
     "_OnChangedClipRect"=>"banned",
     "_OnChangedTextureID"=>"banned",
     "_OnChangedVtxOffset"=>"banned",
-    
+    "PushClipRect"=>"banned",
+    "PopClipRect"=>"banned"
    );
 #
 # This is only useful for ENABLE_IM_LUA_END_STACK
@@ -552,7 +553,6 @@ for (my $i=0; $i < scalar @blocks; $i++) {
 close(FH);
 
 $enum_match = join "|", @enum_types;
-print STDERR "$enum_match\n";
 
 # @spaderthomas 3/1/2020: ImGui also puts its deprecated functions in namespace ImGui,
 # so we'll end up parsing a couple functions twice and causing compiler errors.

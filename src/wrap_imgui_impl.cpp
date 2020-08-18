@@ -271,6 +271,9 @@ static int w_AddFontFromFileTTF(lua_State *L) {
 	}
 }
 
+
+static const char* const g_drawListTargets[] = {"background", "window", "foreground"};
+
 /*
 ** Wrapped functions
 */
@@ -281,6 +284,24 @@ static int impl_##name(lua_State *L) { \
 	int arg = 1; \
 	int stackval = 0;
 
+#define IMGUI_FUNCTION_DRAW_LIST(name) \
+static int impl_##name(lua_State *L) { \
+    int max_args = lua_gettop(L); \
+    int arg = 1; \
+    int stackval = 0; \
+    int t_index = luaL_checkoption(L, arg++, "window", g_drawListTargets); \
+    ImDrawList *draw_list = NULL; \
+    if (t_index == 0) { \
+        draw_list = ImGui::GetBackgroundDrawList(); \
+    } else if (t_index == 1) { \
+        draw_list = ImGui::GetWindowDrawList(); \
+    } else if (t_index == 2) { \
+        draw_list = ImGui::GetForegroundDrawList(); \
+    } \
+    if (!draw_list) { \
+        return stackval; \
+    } \
+    
 #define TEXTURE_ARG(name) \
 	DoStringCache::getImgui(L); \
 	lua_pushvalue(L, arg++); \
@@ -355,10 +376,10 @@ static int impl_##name(lua_State *L) { \
 			{ \
 	lua_pushinteger(L, i*2 + 1); \
 	lua_gettable(L, arg - 1); \
-    float x = lua_checknumber(L, -1)   \
+    float x = luaL_checknumber(L, -1);   \
     lua_pushinteger(L, i*2 + 2); \
     lua_gettable(L, arg - 1); \
-    float y = lua_checknumber(L, -1); \
+    float y = luaL_checknumber(L, -1); \
 	list.push_back(ImVec2(x, y)); \
 			} \
 	const ImVec2 *name = list.data(); \
@@ -606,6 +627,9 @@ static int impl_##name(lua_State *L) { \
 
 #define CALL_FUNCTION_NO_RET(name, ...) \
 	ImGui::name(__VA_ARGS__);
+    
+#define DRAW_LIST_CALL_FUNCTION_NO_RET(name, ...) \
+    draw_list->name(__VA_ARGS__);
 
 #define PUSH_NUMBER(name) \
 	if (!g_returnValueLast) { \
@@ -688,7 +712,7 @@ static void ImEndStack(int type) { \
 
 #include "imgui_iterator.h"
 #include "imgui_iterator_custom.h"
-//#include "imgui_drawlist_iterator.h"
+#include "imgui_drawlist_iterator.h"
 
 /*
 ** Hand made overrides
@@ -821,6 +845,15 @@ static int w_IsRectVisible(lua_State *L)
     return impl_IsRectVisible(L);
 }
 
+static int w_GetColorU32(lua_State *L)
+{
+    if (lua_gettop(L) > 2)
+    {
+        return impl_GetColorU32_2(L);
+    }
+    return impl_GetColorU32(L);
+}
+
 /*
 ** Reg
 */
@@ -830,6 +863,8 @@ static const struct luaL_Reg imguilib[] = {
 #define IMGUI_FUNCTION(name) {#name, impl_##name},
 	// These defines are just redefining everything to nothing so
 	// we can get the function names
+#undef IMGUI_FUNCTION_DRAW_LIST
+#define IMGUI_FUNCTION_DRAW_LIST(name) {#name, impl_##name},
 #undef DEFAULT_ARG
 #define DEFAULT_ARG(type, name, value)
 #undef TEXTURE_ARG
@@ -924,6 +959,8 @@ static const struct luaL_Reg imguilib[] = {
 #define CALL_FUNCTION(name, retType, ...)
 #undef CALL_FUNCTION_NO_RET
 #define CALL_FUNCTION_NO_RET(name, ...)
+#undef DRAW_LIST_CALL_FUNCTION_NO_RET
+#define DRAW_LIST_CALL_FUNCTION_NO_RET(name, ...)
 #undef PUSH_NUMBER
 #define PUSH_NUMBER(name)
 #undef PUSH_BOOL
@@ -955,7 +992,7 @@ static const struct luaL_Reg imguilib[] = {
 
 #include "imgui_iterator.h"
 #include "imgui_iterator_custom.h"
-//#include "imgui_drawlist_iterator.h"
+#include "imgui_drawlist_iterator.h"
 
 	// Custom
 { "GetStyleColName", w_GetStyleColorName },
@@ -978,9 +1015,9 @@ static const struct luaL_Reg imguilib[] = {
 { "SetWindowFocus", w_SetWindowFocus },
 { "BeginChild", w_BeginChild },
 { "IsRectVisible", w_IsRectVisible },
+{ "GetColorU32", w_GetColorU32 },
 
 // functions that may need custom overrides
-// GetColU32
 // ListBoxHeader
 
 // Implementation
