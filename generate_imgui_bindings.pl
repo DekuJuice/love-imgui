@@ -330,9 +330,9 @@ sub generateImguiGeneric {
           }
           push(@funcArgs, $name);
         # Enums
-        } elsif ($args[$i] =~ m/^ *($enum_match) ([^ =,\[]*]*)( *= .*|) *$/) {
+        } elsif ($args[$i] =~ m/^ *($enum_match) *([^ =,\[]*]*)( *= *.*|) *$/) {
          my $name = $2;
-          if ($3 =~ m/^ = *([^ ,]*)$/) {
+          if ($3 =~ m/^ *= *([^ ,]*)$/) {
             push(@before, "OPTIONAL_ENUM_ARG($name, $1)");
           } else {
             push(@before, "ENUM_ARG($name)");
@@ -552,6 +552,7 @@ for (my $i=0; $i < scalar @blocks; $i++) {
 close(FH);
 
 $enum_match = join "|", @enum_types;
+print STDERR "$enum_match\n";
 
 # @spaderthomas 3/1/2020: ImGui also puts its deprecated functions in namespace ImGui,
 # so we'll end up parsing a couple functions twice and causing compiler errors.

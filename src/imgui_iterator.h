@@ -166,16 +166,16 @@ END_IMGUI_FUNC
 
 //    IMGUI_API bool          IsWindowFocused(ImGuiFocusedFlags flags=0); // is current window focused? or its root/child, depending on flags. see flags for options.
 IMGUI_FUNCTION(IsWindowFocused)
-DEFAULT_ARG(ImGuiFocusedFlags, flags, 0)
-CALL_FUNCTION(IsWindowFocused, bool)
+OPTIONAL_ENUM_ARG(flags, 0)
+CALL_FUNCTION(IsWindowFocused, bool, flags)
 PUSH_BOOL(ret)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
 
 //    IMGUI_API bool          IsWindowHovered(ImGuiHoveredFlags flags=0); // is current window hovered (and typically: not blocked by a popup/modal)? see flags for options. NB: If you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that! Please read the FAQ!
 IMGUI_FUNCTION(IsWindowHovered)
-DEFAULT_ARG(ImGuiHoveredFlags, flags, 0)
-CALL_FUNCTION(IsWindowHovered, bool)
+OPTIONAL_ENUM_ARG(flags, 0)
+CALL_FUNCTION(IsWindowHovered, bool, flags)
 PUSH_BOOL(ret)
 PUSH_LAST_BOOL(ret)
 END_IMGUI_FUNC
