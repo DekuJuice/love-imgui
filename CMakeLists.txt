@@ -35,6 +35,8 @@ ADD_LIBRARY(love-imgui
 	src/imgui_impl.h
 	src/wrap_imgui_impl.h
 	src/imgui_iterator.h
+    src/imgui_drawlist_iterator.h
+    src/imgui_enum.h
 	src/dostring_cache.cpp
 )
 

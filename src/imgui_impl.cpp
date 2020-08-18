@@ -100,8 +100,8 @@ void ImGui_Impl_RenderDrawLists(ImDrawData* draw_data)
 			}
 
 			luaL_dostring(g_L, "\
-				love.graphics.setScissor(imgui.clipX, imgui.clipY, imgui.clipWidth, imgui.clipHeight) \
-				imgui.renderMesh:setDrawRange(imgui.vertexPosition, imgui.vertexCount) \
+                love.graphics.setScissor(imgui.clipX, imgui.clipY, imgui.clipWidth, imgui.clipHeight) \
+                imgui.renderMesh:setDrawRange(imgui.vertexPosition, imgui.vertexCount) \
 				love.graphics.draw(imgui.renderMesh) \
                 love.graphics.pop() \
 			");
@@ -144,8 +144,6 @@ bool Init(lua_State *L)
 	// Create the texture object
 	unsigned char* pixels;
 	int width, height;
-    
-    
     
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 	
@@ -269,12 +267,7 @@ void MouseMoved(int x, int y)
 	if (g_L)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		luaL_dostring(g_L, "return love.window.hasMouseFocus()");
-		int focus = lua_toboolean(g_L, 3);
-		if (focus > 0)
-			io.MousePos = ImVec2((float)x, (float)y);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-		else
-			io.MousePos = ImVec2(-1, -1);
+		io.MousePos = ImVec2((float)x, (float)y);
 	}
 }
 

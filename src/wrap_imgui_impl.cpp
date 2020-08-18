@@ -347,6 +347,22 @@ static int impl_##name(lua_State *L) { \
 			} \
 	const ImVec2 name((float)i_##name##_x, (float)i_##name##_y);
 
+#define IM_VEC_2_ARRAY_ARG(name)\
+	luaL_checktype(L, arg, LUA_TTABLE); \
+	int len = lua_objlen(L, arg++) / 2; \
+	std::vector<ImVec2> list; \
+	for (int i = 0; i < len; i++) \
+			{ \
+	lua_pushinteger(L, i*2 + 1); \
+	lua_gettable(L, arg - 1); \
+    float x = lua_checknumber(L, -1)   \
+    lua_pushinteger(L, i*2 + 2); \
+    lua_gettable(L, arg - 1); \
+    float y = lua_checknumber(L, -1); \
+	list.push_back(ImVec2(x, y)); \
+			} \
+	const ImVec2 *name = list.data(); \
+    
 #define IM_VEC_4_ARG(name)\
 	const lua_Number i_##name##_x = luaL_checknumber(L, arg++); \
 	const lua_Number i_##name##_y = luaL_checknumber(L, arg++); \
@@ -671,7 +687,8 @@ static void ImEndStack(int type) { \
 #endif
 
 #include "imgui_iterator.h"
-//#include "imgui_iterator_dock.h"
+#include "imgui_iterator_custom.h"
+//#include "imgui_drawlist_iterator.h"
 
 /*
 ** Hand made overrides
@@ -693,24 +710,6 @@ static int w_CollapsingHeader(lua_State *L)
 		return impl_CollapsingHeader_2(L);
 	}
 	return impl_CollapsingHeader(L);
-}
-
-static int w_TreeNodeEx(lua_State *L)
-{
-	if (lua_gettop(L) > 2)
-	{
-		return impl_TreeNodeEx_2(L);
-	}
-	return impl_TreeNodeEx(L);
-}
-
-static int w_TreeNode(lua_State *L)
-{
-	if (lua_gettop(L) > 1)
-	{
-		return impl_TreeNode_2(L);
-	}
-	return impl_TreeNode(L);
 }
 
 static int w_Combo(lua_State *L)
@@ -812,6 +811,16 @@ static int w_BeginChild(lua_State *L)
 	return impl_BeginChild_2(L);
 }
 
+static int w_IsRectVisible(lua_State *L)
+{
+    if (lua_gettop(L) > 2) 
+    {
+        return impl_IsRectVisible_2(L);
+    }
+    
+    return impl_IsRectVisible(L);
+}
+
 /*
 ** Reg
 */
@@ -839,6 +848,8 @@ static const struct luaL_Reg imguilib[] = {
 #define IM_VEC_2_ARG(name)
 #undef OPTIONAL_IM_VEC_2_ARG
 #define OPTIONAL_IM_VEC_2_ARG(name, x, y)
+#undef IM_VEC_2_ARRAY_ARG
+#define IM_VEC_2_ARRAY_ARG(name)
 #undef IM_VEC_4_ARG
 #define IM_VEC_4_ARG(name)
 #undef OPTIONAL_IM_VEC_4_ARG
@@ -943,7 +954,8 @@ static const struct luaL_Reg imguilib[] = {
 #define POP_END_STACK(type)
 
 #include "imgui_iterator.h"
-//#include "imgui_iterator_dock.h"
+#include "imgui_iterator_custom.h"
+//#include "imgui_drawlist_iterator.h"
 
 	// Custom
 { "GetStyleColName", w_GetStyleColorName },
@@ -965,6 +977,11 @@ static const struct luaL_Reg imguilib[] = {
 { "SetWindowCollapsed", w_SetWindowCollapsed },
 { "SetWindowFocus", w_SetWindowFocus },
 { "BeginChild", w_BeginChild },
+{ "IsRectVisible", w_IsRectVisible },
+
+// functions that may need custom overrides
+// GetColU32
+// ListBoxHeader
 
 // Implementation
 { "Init", w_Init},
@@ -987,407 +1004,16 @@ static const struct luaL_Reg imguilib[] = {
 { NULL, NULL }
 };
 
-#define WRAP_ENUM(L, name, val) \
+#define MAKE_ENUM(name) \
   lua_pushlstring(L, #name, sizeof(#name)-1); \
-  lua_pushnumber(L, val); \
+  lua_pushnumber(L, name); \
   lua_settable(L, -3);
 
 extern "C" LOVE_IMGUI_EXPORT int luaopen_imgui(lua_State *L)
 {
-	// Enums not handled by iterator yet
+    
 	lua_newtable(L);
-
-	// ImGuiWindowFlags
-	WRAP_ENUM(L, ImGuiWindowFlags_None, ImGuiWindowFlags_None);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoTitleBar, ImGuiWindowFlags_NoTitleBar);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoResize);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoMove, ImGuiWindowFlags_NoMove);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoScrollbar);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoScrollWithMouse, ImGuiWindowFlags_NoScrollWithMouse);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoCollapse, ImGuiWindowFlags_NoCollapse);
-	WRAP_ENUM(L, ImGuiWindowFlags_AlwaysAutoResize, ImGuiWindowFlags_AlwaysAutoResize);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_NoBackground);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoSavedSettings, ImGuiWindowFlags_NoSavedSettings);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoMouseInputs, ImGuiWindowFlags_NoMouseInputs);
-	WRAP_ENUM(L, ImGuiWindowFlags_MenuBar, ImGuiWindowFlags_MenuBar);
-	WRAP_ENUM(L, ImGuiWindowFlags_HorizontalScrollbar, ImGuiWindowFlags_HorizontalScrollbar);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoFocusOnAppearing, ImGuiWindowFlags_NoFocusOnAppearing);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoBringToFrontOnFocus, ImGuiWindowFlags_NoBringToFrontOnFocus);
-	WRAP_ENUM(L, ImGuiWindowFlags_AlwaysVerticalScrollbar, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-	WRAP_ENUM(L, ImGuiWindowFlags_AlwaysHorizontalScrollbar, ImGuiWindowFlags_AlwaysHorizontalScrollbar);
-	WRAP_ENUM(L, ImGuiWindowFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_AlwaysUseWindowPadding);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoNavInputs, ImGuiWindowFlags_NoNavInputs);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoNavFocus, ImGuiWindowFlags_NoNavFocus);
-	WRAP_ENUM(L, ImGuiWindowFlags_UnsavedDocument, ImGuiWindowFlags_UnsavedDocument);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoDocking, ImGuiWindowFlags_NoDocking);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoNav, ImGuiWindowFlags_NoNav);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_NoDecoration);
-	WRAP_ENUM(L, ImGuiWindowFlags_NoInputs, ImGuiWindowFlags_NoInputs);
-	WRAP_ENUM(L, ImGuiWindowFlags_NavFlattened, ImGuiWindowFlags_NavFlattened);
-
-	// ImGuiInputTextFlags
-  	WRAP_ENUM(L, ImGuiInputTextFlags_None, ImGuiInputTextFlags_None);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CharsDecimal, ImGuiInputTextFlags_CharsDecimal);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CharsHexadecimal, ImGuiInputTextFlags_CharsHexadecimal);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CharsUppercase, ImGuiInputTextFlags_CharsUppercase);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CharsNoBlank, ImGuiInputTextFlags_CharsNoBlank);
-	WRAP_ENUM(L, ImGuiInputTextFlags_AutoSelectAll, ImGuiInputTextFlags_AutoSelectAll);
-	WRAP_ENUM(L, ImGuiInputTextFlags_EnterReturnsTrue, ImGuiInputTextFlags_EnterReturnsTrue);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CallbackCompletion, ImGuiInputTextFlags_CallbackCompletion);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CallbackHistory, ImGuiInputTextFlags_CallbackHistory);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CallbackAlways, ImGuiInputTextFlags_CallbackAlways);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CallbackCharFilter, ImGuiInputTextFlags_CallbackCharFilter);
-	WRAP_ENUM(L, ImGuiInputTextFlags_AllowTabInput, ImGuiInputTextFlags_AllowTabInput);
-	WRAP_ENUM(L, ImGuiInputTextFlags_CtrlEnterForNewLine, ImGuiInputTextFlags_CtrlEnterForNewLine);
-	WRAP_ENUM(L, ImGuiInputTextFlags_NoHorizontalScroll, ImGuiInputTextFlags_NoHorizontalScroll);
-	WRAP_ENUM(L, ImGuiInputTextFlags_AlwaysInsertMode, ImGuiInputTextFlags_AlwaysInsertMode);
-	WRAP_ENUM(L, ImGuiInputTextFlags_ReadOnly, ImGuiInputTextFlags_ReadOnly);
-	WRAP_ENUM(L, ImGuiInputTextFlags_Password, ImGuiInputTextFlags_Password);
-	WRAP_ENUM(L, ImGuiInputTextFlags_NoUndoRedo, ImGuiInputTextFlags_NoUndoRedo);
-  	WRAP_ENUM(L, ImGuiInputTextFlags_CharsScientific, ImGuiInputTextFlags_CharsScientific);
-  	WRAP_ENUM(L, ImGuiInputTextFlags_CallbackResize, ImGuiInputTextFlags_CallbackResize);
-
-	// ImGuiTreeNodeFlags
-  	WRAP_ENUM(L, ImGuiTreeNodeFlags_None, ImGuiTreeNodeFlags_None);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_Selected, ImGuiTreeNodeFlags_Selected);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_Framed, ImGuiTreeNodeFlags_Framed);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_AllowItemOverlap, ImGuiTreeNodeFlags_AllowItemOverlap);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_NoTreePushOnOpen, ImGuiTreeNodeFlags_NoTreePushOnOpen);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_NoAutoOpenOnLog, ImGuiTreeNodeFlags_NoAutoOpenOnLog);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_DefaultOpen, ImGuiTreeNodeFlags_DefaultOpen);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_OpenOnDoubleClick, ImGuiTreeNodeFlags_OpenOnDoubleClick);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_OpenOnArrow, ImGuiTreeNodeFlags_OpenOnArrow);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_Leaf, ImGuiTreeNodeFlags_Leaf);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_Bullet, ImGuiTreeNodeFlags_Bullet);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_FramePadding, ImGuiTreeNodeFlags_FramePadding);
-	WRAP_ENUM(L, ImGuiTreeNodeFlags_SpanAvailWidth, ImGuiTreeNodeFlags_SpanAvailWidth);
-  	WRAP_ENUM(L, ImGuiTreeNodeFlags_SpanFullWidth, ImGuiTreeNodeFlags_SpanFullWidth);
-  	WRAP_ENUM(L, ImGuiTreeNodeFlags_NavLeftJumpsBackHere, ImGuiTreeNodeFlags_NavLeftJumpsBackHere);
-  	WRAP_ENUM(L, ImGuiTreeNodeFlags_CollapsingHeader, ImGuiTreeNodeFlags_CollapsingHeader);
-
-    // ImGuiPopupFlags
-    WRAP_ENUM(L, ImGuiPopupFlags_None, ImGuiPopupFlags_None);
-    WRAP_ENUM(L, ImGuiPopupFlags_MouseButtonLeft, ImGuiPopupFlags_MouseButtonLeft);
-    WRAP_ENUM(L, ImGuiPopupFlags_MouseButtonRight, ImGuiPopupFlags_MouseButtonRight);
-    WRAP_ENUM(L, ImGuiPopupFlags_MouseButtonMiddle, ImGuiPopupFlags_MouseButtonMiddle);
-    WRAP_ENUM(L, ImGuiPopupFlags_MouseButtonMask_, ImGuiPopupFlags_MouseButtonMask_);
-    WRAP_ENUM(L, ImGuiPopupFlags_MouseButtonDefault_, ImGuiPopupFlags_MouseButtonDefault_);
-    WRAP_ENUM(L, ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverExistingPopup);
-    WRAP_ENUM(L, ImGuiPopupFlags_NoOpenOverItems, ImGuiPopupFlags_NoOpenOverItems);
-    WRAP_ENUM(L, ImGuiPopupFlags_AnyPopupId, ImGuiPopupFlags_AnyPopupId);
-    WRAP_ENUM(L, ImGuiPopupFlags_AnyPopupLevel, ImGuiPopupFlags_AnyPopupLevel);
-    WRAP_ENUM(L, ImGuiPopupFlags_AnyPopup, ImGuiPopupFlags_AnyPopup);
-    
-	// ImGuiSelectableFlags
-  	WRAP_ENUM(L, ImGuiSelectableFlags_None, ImGuiSelectableFlags_None);
-	WRAP_ENUM(L, ImGuiSelectableFlags_DontClosePopups, ImGuiSelectableFlags_DontClosePopups);
-	WRAP_ENUM(L, ImGuiSelectableFlags_SpanAllColumns, ImGuiSelectableFlags_SpanAllColumns);
-	WRAP_ENUM(L, ImGuiSelectableFlags_AllowDoubleClick, ImGuiSelectableFlags_AllowDoubleClick);
-  	WRAP_ENUM(L, ImGuiSelectableFlags_Disabled, ImGuiSelectableFlags_Disabled);
-  	WRAP_ENUM(L, ImGuiSelectableFlags_AllowItemOverlap, ImGuiSelectableFlags_AllowItemOverlap);
-
-	// ImGuiComboFlags
-  	WRAP_ENUM(L, ImGuiComboFlags_None, ImGuiComboFlags_None);
-	WRAP_ENUM(L, ImGuiComboFlags_PopupAlignLeft, ImGuiComboFlags_PopupAlignLeft);
-	WRAP_ENUM(L, ImGuiComboFlags_HeightSmall, ImGuiComboFlags_HeightSmall);
-	WRAP_ENUM(L, ImGuiComboFlags_HeightRegular, ImGuiComboFlags_HeightRegular);
-	WRAP_ENUM(L, ImGuiComboFlags_HeightLarge, ImGuiComboFlags_HeightLarge);
-	WRAP_ENUM(L, ImGuiComboFlags_HeightLargest, ImGuiComboFlags_HeightLargest);
-  	WRAP_ENUM(L, ImGuiComboFlags_NoArrowButton, ImGuiComboFlags_NoArrowButton);
-  	WRAP_ENUM(L, ImGuiComboFlags_NoPreview, ImGuiComboFlags_NoPreview);
-	WRAP_ENUM(L, ImGuiComboFlags_HeightMask_, ImGuiComboFlags_HeightMask_);
-
-	// ImGuiTabBarFlags
-	WRAP_ENUM(L, ImGuiTabBarFlags_None, ImGuiTabBarFlags_None);
-	WRAP_ENUM(L, ImGuiTabBarFlags_Reorderable, ImGuiTabBarFlags_Reorderable);
-	WRAP_ENUM(L, ImGuiTabBarFlags_AutoSelectNewTabs, ImGuiTabBarFlags_AutoSelectNewTabs);
-	WRAP_ENUM(L, ImGuiTabBarFlags_TabListPopupButton, ImGuiTabBarFlags_TabListPopupButton);
-	WRAP_ENUM(L, ImGuiTabBarFlags_NoCloseWithMiddleMouseButton, ImGuiTabBarFlags_NoCloseWithMiddleMouseButton);
-	WRAP_ENUM(L, ImGuiTabBarFlags_NoTabListScrollingButtons, ImGuiTabBarFlags_NoTabListScrollingButtons);
-	WRAP_ENUM(L, ImGuiTabBarFlags_NoTooltip, ImGuiTabBarFlags_NoTooltip);
-	WRAP_ENUM(L, ImGuiTabBarFlags_FittingPolicyResizeDown, ImGuiTabBarFlags_FittingPolicyResizeDown);
-	WRAP_ENUM(L, ImGuiTabBarFlags_FittingPolicyScroll, ImGuiTabBarFlags_FittingPolicyScroll);
-	WRAP_ENUM(L, ImGuiTabBarFlags_FittingPolicyMask_, ImGuiTabBarFlags_FittingPolicyMask_);
-	WRAP_ENUM(L, ImGuiTabBarFlags_FittingPolicyDefault_, ImGuiTabBarFlags_FittingPolicyDefault_);
-
-	// ImGuiTabItemFlags
-	WRAP_ENUM(L, ImGuiTabItemFlags_None, ImGuiTabItemFlags_None);
-	WRAP_ENUM(L, ImGuiTabItemFlags_UnsavedDocument, ImGuiTabItemFlags_UnsavedDocument);
-	WRAP_ENUM(L, ImGuiTabItemFlags_SetSelected, ImGuiTabItemFlags_SetSelected);
-	WRAP_ENUM(L, ImGuiTabItemFlags_NoCloseWithMiddleMouseButton, ImGuiTabItemFlags_NoCloseWithMiddleMouseButton);
-	WRAP_ENUM(L, ImGuiTabItemFlags_NoPushId, ImGuiTabItemFlags_NoPushId);
-	WRAP_ENUM(L, ImGuiTabItemFlags_NoTooltip, ImGuiTabItemFlags_NoTooltip);
-
-	// ImGuiFocusedFlags
-	WRAP_ENUM(L, ImGuiFocusedFlags_None, ImGuiFocusedFlags_None);
-  	WRAP_ENUM(L, ImGuiFocusedFlags_ChildWindows, ImGuiFocusedFlags_ChildWindows);
-	WRAP_ENUM(L, ImGuiFocusedFlags_RootWindow, ImGuiFocusedFlags_RootWindow);
-  	WRAP_ENUM(L, ImGuiFocusedFlags_AnyWindow, ImGuiFocusedFlags_AnyWindow);
-	WRAP_ENUM(L, ImGuiFocusedFlags_RootAndChildWindows, ImGuiFocusedFlags_RootAndChildWindows);
-
-	// ImGuiHoveredFlags
-	WRAP_ENUM(L, ImGuiHoveredFlags_None, ImGuiHoveredFlags_None);
-	WRAP_ENUM(L, ImGuiHoveredFlags_ChildWindows, ImGuiHoveredFlags_ChildWindows);
-	WRAP_ENUM(L, ImGuiHoveredFlags_RootWindow, ImGuiHoveredFlags_RootWindow);
-  	WRAP_ENUM(L, ImGuiHoveredFlags_AnyWindow, ImGuiHoveredFlags_AnyWindow);
-	WRAP_ENUM(L, ImGuiHoveredFlags_AllowWhenBlockedByPopup, ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-	WRAP_ENUM(L, ImGuiHoveredFlags_AllowWhenBlockedByActiveItem, ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-	WRAP_ENUM(L, ImGuiHoveredFlags_AllowWhenOverlapped, ImGuiHoveredFlags_AllowWhenOverlapped);
-  	WRAP_ENUM(L, ImGuiHoveredFlags_AllowWhenDisabled, ImGuiHoveredFlags_AllowWhenDisabled);
-	WRAP_ENUM(L, ImGuiHoveredFlags_RectOnly, ImGuiHoveredFlags_RectOnly);
-	WRAP_ENUM(L, ImGuiHoveredFlags_RootAndChildWindows, ImGuiHoveredFlags_RootAndChildWindows);
-
-    // ImGuiDockNodeFlags
-    WRAP_ENUM(L, ImGuiDockNodeFlags_None, ImGuiDockNodeFlags_None);
-    WRAP_ENUM(L, ImGuiDockNodeFlags_KeepAliveOnly, ImGuiDockNodeFlags_KeepAliveOnly);
-    WRAP_ENUM(L, ImGuiDockNodeFlags_NoDockingInCentralNode, ImGuiDockNodeFlags_NoDockingInCentralNode);
-    WRAP_ENUM(L, ImGuiDockNodeFlags_PassthruCentralNode, ImGuiDockNodeFlags_PassthruCentralNode);     WRAP_ENUM(L, ImGuiDockNodeFlags_NoSplit, ImGuiDockNodeFlags_NoSplit);
-    WRAP_ENUM(L, ImGuiDockNodeFlags_NoResize, ImGuiDockNodeFlags_NoResize);
-    WRAP_ENUM(L, ImGuiDockNodeFlags_AutoHideTabBar, ImGuiDockNodeFlags_AutoHideTabBar);
-
-	// ImGuiDragDropFlags_
-  	WRAP_ENUM(L, ImGuiDragDropFlags_None, ImGuiDragDropFlags_None);
-	WRAP_ENUM(L, ImGuiDragDropFlags_SourceNoPreviewTooltip, ImGuiDragDropFlags_SourceNoPreviewTooltip);
-	WRAP_ENUM(L, ImGuiDragDropFlags_SourceNoDisableHover, ImGuiDragDropFlags_SourceNoDisableHover);
-	WRAP_ENUM(L, ImGuiDragDropFlags_SourceNoHoldToOpenOthers, ImGuiDragDropFlags_SourceNoHoldToOpenOthers);
-	WRAP_ENUM(L, ImGuiDragDropFlags_SourceAllowNullID, ImGuiDragDropFlags_SourceAllowNullID);
-	WRAP_ENUM(L, ImGuiDragDropFlags_SourceExtern, ImGuiDragDropFlags_SourceExtern);
-  	WRAP_ENUM(L, ImGuiDragDropFlags_SourceAutoExpirePayload, ImGuiDragDropFlags_SourceAutoExpirePayload);
-	WRAP_ENUM(L, ImGuiDragDropFlags_AcceptBeforeDelivery, ImGuiDragDropFlags_AcceptBeforeDelivery);
-	WRAP_ENUM(L, ImGuiDragDropFlags_AcceptNoDrawDefaultRect, ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-	WRAP_ENUM(L, ImGuiDragDropFlags_AcceptNoPreviewTooltip, ImGuiDragDropFlags_AcceptNoPreviewTooltip);
-  	WRAP_ENUM(L, ImGuiDragDropFlags_AcceptPeekOnly, ImGuiDragDropFlags_AcceptPeekOnly);
-
-  	// ImGuiDataType
-  	WRAP_ENUM(L, ImGuiDataType_S8, ImGuiDataType_S8);
-  	WRAP_ENUM(L, ImGuiDataType_U8, ImGuiDataType_U8);
-  	WRAP_ENUM(L, ImGuiDataType_S16, ImGuiDataType_S16);
-  	WRAP_ENUM(L, ImGuiDataType_U16, ImGuiDataType_U16);
-  	WRAP_ENUM(L, ImGuiDataType_S32, ImGuiDataType_S32);
-  	WRAP_ENUM(L, ImGuiDataType_U32, ImGuiDataType_U32);
-  	WRAP_ENUM(L, ImGuiDataType_S64, ImGuiDataType_S64);
-  	WRAP_ENUM(L, ImGuiDataType_U64, ImGuiDataType_U64);
-  	WRAP_ENUM(L, ImGuiDataType_Float, ImGuiDataType_Float);
-  	WRAP_ENUM(L, ImGuiDataType_Double, ImGuiDataType_Double);
-  	WRAP_ENUM(L, ImGuiDataType_COUNT, ImGuiDataType_COUNT);
-
-  	// ImGuiDir
-  	WRAP_ENUM(L, ImGuiDir_None, ImGuiDir_None);
-  	WRAP_ENUM(L, ImGuiDir_Left, ImGuiDir_Left);
-  	WRAP_ENUM(L, ImGuiDir_Right, ImGuiDir_Right);
-  	WRAP_ENUM(L, ImGuiDir_Up, ImGuiDir_Up);
-  	WRAP_ENUM(L, ImGuiDir_Down, ImGuiDir_Down);
-  	WRAP_ENUM(L, ImGuiDir_COUNT, ImGuiDir_COUNT);
-
-  	// ImGuiKey
-  	WRAP_ENUM(L, ImGuiKey_Tab, ImGuiKey_Tab);
-  	WRAP_ENUM(L, ImGuiKey_LeftArrow, ImGuiKey_LeftArrow);
-  	WRAP_ENUM(L, ImGuiKey_RightArrow, ImGuiKey_RightArrow);
-  	WRAP_ENUM(L, ImGuiKey_UpArrow, ImGuiKey_UpArrow);
-  	WRAP_ENUM(L, ImGuiKey_DownArrow, ImGuiKey_DownArrow);
-  	WRAP_ENUM(L, ImGuiKey_PageUp, ImGuiKey_PageUp);
-  	WRAP_ENUM(L, ImGuiKey_PageDown, ImGuiKey_PageDown);
-  	WRAP_ENUM(L, ImGuiKey_Home, ImGuiKey_Home);
-  	WRAP_ENUM(L, ImGuiKey_End, ImGuiKey_End);
-  	WRAP_ENUM(L, ImGuiKey_Insert, ImGuiKey_Insert);
-  	WRAP_ENUM(L, ImGuiKey_Delete, ImGuiKey_Delete);
-  	WRAP_ENUM(L, ImGuiKey_Backspace, ImGuiKey_Backspace);
-  	WRAP_ENUM(L, ImGuiKey_Space, ImGuiKey_Space);
-  	WRAP_ENUM(L, ImGuiKey_Enter, ImGuiKey_Enter);
-  	WRAP_ENUM(L, ImGuiKey_Escape, ImGuiKey_Escape);
-  	WRAP_ENUM(L, ImGuiKey_KeyPadEnter, ImGuiKey_KeyPadEnter);
-  	WRAP_ENUM(L, ImGuiKey_A, ImGuiKey_A);
-  	WRAP_ENUM(L, ImGuiKey_C, ImGuiKey_C);
-  	WRAP_ENUM(L, ImGuiKey_V, ImGuiKey_V);
-  	WRAP_ENUM(L, ImGuiKey_X, ImGuiKey_X);
-  	WRAP_ENUM(L, ImGuiKey_Y, ImGuiKey_Y);
-  	WRAP_ENUM(L, ImGuiKey_Z, ImGuiKey_Z);
-  	WRAP_ENUM(L, ImGuiKey_COUNT, ImGuiKey_COUNT);
-
-  	// ImGuiNavInput
-  	WRAP_ENUM(L, ImGuiNavInput_Activate, ImGuiNavInput_Activate);
-  	WRAP_ENUM(L, ImGuiNavInput_Cancel, ImGuiNavInput_Cancel);
-  	WRAP_ENUM(L, ImGuiNavInput_Input, ImGuiNavInput_Input);
-  	WRAP_ENUM(L, ImGuiNavInput_Menu, ImGuiNavInput_Menu);
-  	WRAP_ENUM(L, ImGuiNavInput_DpadLeft, ImGuiNavInput_DpadLeft);
-  	WRAP_ENUM(L, ImGuiNavInput_DpadRight, ImGuiNavInput_DpadRight);
-  	WRAP_ENUM(L, ImGuiNavInput_DpadUp, ImGuiNavInput_DpadUp);
-  	WRAP_ENUM(L, ImGuiNavInput_DpadDown, ImGuiNavInput_DpadDown);
-  	WRAP_ENUM(L, ImGuiNavInput_LStickLeft, ImGuiNavInput_LStickLeft);
-  	WRAP_ENUM(L, ImGuiNavInput_LStickRight, ImGuiNavInput_LStickRight);
-  	WRAP_ENUM(L, ImGuiNavInput_LStickUp, ImGuiNavInput_LStickUp);
-  	WRAP_ENUM(L, ImGuiNavInput_LStickDown, ImGuiNavInput_LStickDown);
-  	WRAP_ENUM(L, ImGuiNavInput_FocusPrev, ImGuiNavInput_FocusPrev);
-  	WRAP_ENUM(L, ImGuiNavInput_FocusNext, ImGuiNavInput_FocusNext);
-  	WRAP_ENUM(L, ImGuiNavInput_TweakSlow, ImGuiNavInput_TweakSlow);
-  	WRAP_ENUM(L, ImGuiNavInput_TweakFast, ImGuiNavInput_TweakFast);
-    
-    // ImGuiMouseButton
-    WRAP_ENUM(L, ImGuiMouseButton_Left, ImGuiMouseButton_Left);
-    WRAP_ENUM(L, ImGuiMouseButton_Right, ImGuiMouseButton_Right);
-    WRAP_ENUM(L, ImGuiMouseButton_Middle, ImGuiMouseButton_Middle);
-    WRAP_ENUM(L, ImGuiMouseButton_COUNT, ImGuiMouseButton_COUNT);
-    
-  	// ImGuiConfigFlags
-  	WRAP_ENUM(L, ImGuiConfigFlags_None, ImGuiConfigFlags_None);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NavEnableKeyboard, ImGuiConfigFlags_NavEnableKeyboard);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NavEnableGamepad, ImGuiConfigFlags_NavEnableGamepad);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NavEnableSetMousePos, ImGuiConfigFlags_NavEnableSetMousePos);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NavNoCaptureKeyboard, ImGuiConfigFlags_NavNoCaptureKeyboard);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NoMouse, ImGuiConfigFlags_NoMouse);
-  	WRAP_ENUM(L, ImGuiConfigFlags_NoMouseCursorChange, ImGuiConfigFlags_NoMouseCursorChange);
-  	WRAP_ENUM(L, ImGuiConfigFlags_DockingEnable, ImGuiConfigFlags_DockingEnable);
-  	WRAP_ENUM(L, ImGuiConfigFlags_ViewportsEnable, ImGuiConfigFlags_ViewportsEnable);
-  	WRAP_ENUM(L, ImGuiConfigFlags_DpiEnableScaleViewports, ImGuiConfigFlags_DpiEnableScaleViewports);
-  	WRAP_ENUM(L, ImGuiConfigFlags_DpiEnableScaleFonts, ImGuiConfigFlags_DpiEnableScaleFonts);
-  	WRAP_ENUM(L, ImGuiConfigFlags_IsSRGB, ImGuiConfigFlags_IsSRGB);
-  	WRAP_ENUM(L, ImGuiConfigFlags_IsTouchScreen, ImGuiConfigFlags_IsTouchScreen);
-
-  	// ImGuiBackendFlags
-  	WRAP_ENUM(L, ImGuiBackendFlags_None, ImGuiBackendFlags_None);
-  	WRAP_ENUM(L, ImGuiBackendFlags_HasGamepad, ImGuiBackendFlags_HasGamepad);
-  	WRAP_ENUM(L, ImGuiBackendFlags_HasMouseCursors, ImGuiBackendFlags_HasMouseCursors);
-  	WRAP_ENUM(L, ImGuiBackendFlags_HasSetMousePos, ImGuiBackendFlags_HasSetMousePos);
-  	WRAP_ENUM(L, ImGuiBackendFlags_RendererHasVtxOffset, ImGuiBackendFlags_RendererHasVtxOffset);
-  	WRAP_ENUM(L, ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_PlatformHasViewports);
-  	WRAP_ENUM(L, ImGuiBackendFlags_HasMouseHoveredViewport, ImGuiBackendFlags_HasMouseHoveredViewport);
-  	WRAP_ENUM(L, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_RendererHasViewports);
-
-	// ImGuiCol
-	WRAP_ENUM(L, ImGuiCol_Text, ImGuiCol_Text);
-	WRAP_ENUM(L, ImGuiCol_TextDisabled, ImGuiCol_TextDisabled);
-	WRAP_ENUM(L, ImGuiCol_WindowBg, ImGuiCol_WindowBg);
-	WRAP_ENUM(L, ImGuiCol_ChildBg, ImGuiCol_ChildBg);
-	WRAP_ENUM(L, ImGuiCol_PopupBg, ImGuiCol_PopupBg);
-	WRAP_ENUM(L, ImGuiCol_Border, ImGuiCol_Border);
-	WRAP_ENUM(L, ImGuiCol_BorderShadow, ImGuiCol_BorderShadow);
-	WRAP_ENUM(L, ImGuiCol_FrameBg, ImGuiCol_FrameBg);
-	WRAP_ENUM(L, ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgHovered);
-	WRAP_ENUM(L, ImGuiCol_FrameBgActive, ImGuiCol_FrameBgActive);
-	WRAP_ENUM(L, ImGuiCol_TitleBg, ImGuiCol_TitleBg);
-	WRAP_ENUM(L, ImGuiCol_TitleBgActive, ImGuiCol_TitleBgActive);
-	WRAP_ENUM(L, ImGuiCol_TitleBgCollapsed, ImGuiCol_TitleBgCollapsed);
-	WRAP_ENUM(L, ImGuiCol_MenuBarBg, ImGuiCol_MenuBarBg);
-	WRAP_ENUM(L, ImGuiCol_ScrollbarBg, ImGuiCol_ScrollbarBg);
-	WRAP_ENUM(L, ImGuiCol_ScrollbarGrab, ImGuiCol_ScrollbarGrab);
-	WRAP_ENUM(L, ImGuiCol_ScrollbarGrabHovered, ImGuiCol_ScrollbarGrabHovered);
-	WRAP_ENUM(L, ImGuiCol_ScrollbarGrabActive, ImGuiCol_ScrollbarGrabActive);
-	WRAP_ENUM(L, ImGuiCol_CheckMark, ImGuiCol_CheckMark);
-	WRAP_ENUM(L, ImGuiCol_SliderGrab, ImGuiCol_SliderGrab);
-	WRAP_ENUM(L, ImGuiCol_SliderGrabActive, ImGuiCol_SliderGrabActive);
-	WRAP_ENUM(L, ImGuiCol_Button, ImGuiCol_Button);
-	WRAP_ENUM(L, ImGuiCol_ButtonHovered, ImGuiCol_ButtonHovered);
-	WRAP_ENUM(L, ImGuiCol_ButtonActive, ImGuiCol_ButtonActive);
-	WRAP_ENUM(L, ImGuiCol_Header, ImGuiCol_Header);
-	WRAP_ENUM(L, ImGuiCol_HeaderHovered, ImGuiCol_HeaderHovered);
-	WRAP_ENUM(L, ImGuiCol_HeaderActive, ImGuiCol_HeaderActive);
-	WRAP_ENUM(L, ImGuiCol_Separator, ImGuiCol_Separator);
-	WRAP_ENUM(L, ImGuiCol_SeparatorHovered, ImGuiCol_SeparatorHovered);
-	WRAP_ENUM(L, ImGuiCol_SeparatorActive, ImGuiCol_SeparatorActive);
-	WRAP_ENUM(L, ImGuiCol_ResizeGrip, ImGuiCol_ResizeGrip);
-	WRAP_ENUM(L, ImGuiCol_ResizeGripHovered, ImGuiCol_ResizeGripHovered);
-	WRAP_ENUM(L, ImGuiCol_ResizeGripActive, ImGuiCol_ResizeGripActive);
-  	WRAP_ENUM(L, ImGuiCol_Tab, ImGuiCol_Tab);
-  	WRAP_ENUM(L, ImGuiCol_TabHovered, ImGuiCol_TabHovered);
-  	WRAP_ENUM(L, ImGuiCol_TabActive, ImGuiCol_TabActive);
-  	WRAP_ENUM(L, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocused);
-  	WRAP_ENUM(L, ImGuiCol_TabUnfocusedActive, ImGuiCol_TabUnfocusedActive);
-  	WRAP_ENUM(L, ImGuiCol_DockingPreview, ImGuiCol_DockingPreview);
-  	WRAP_ENUM(L, ImGuiCol_DockingEmptyBg, ImGuiCol_DockingEmptyBg);
-	/*WRAP_ENUM(L, ImGuiCol_CloseButton, ImGuiCol_CloseButton);
-	WRAP_ENUM(L, ImGuiCol_CloseButtonHovered, ImGuiCol_CloseButtonHovered);
-	WRAP_ENUM(L, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonActive);*/
-	WRAP_ENUM(L, ImGuiCol_PlotLines, ImGuiCol_PlotLines);
-	WRAP_ENUM(L, ImGuiCol_PlotLinesHovered, ImGuiCol_PlotLinesHovered);
-	WRAP_ENUM(L, ImGuiCol_PlotHistogram, ImGuiCol_PlotHistogram);
-	WRAP_ENUM(L, ImGuiCol_PlotHistogramHovered, ImGuiCol_PlotHistogramHovered);
-	WRAP_ENUM(L, ImGuiCol_TextSelectedBg, ImGuiCol_TextSelectedBg);
-	WRAP_ENUM(L, ImGuiCol_ModalWindowDarkening, ImGuiCol_ModalWindowDarkening);
-	WRAP_ENUM(L, ImGuiCol_DragDropTarget, ImGuiCol_DragDropTarget);
-	WRAP_ENUM(L, ImGuiCol_NavHighlight, ImGuiCol_NavHighlight);
-	WRAP_ENUM(L, ImGuiCol_NavWindowingHighlight, ImGuiCol_NavWindowingHighlight);
-	WRAP_ENUM(L, ImGuiCol_NavWindowingDimBg, ImGuiCol_NavWindowingDimBg);
-	WRAP_ENUM(L, ImGuiCol_ModalWindowDimBg, ImGuiCol_ModalWindowDimBg);
-	WRAP_ENUM(L, ImGuiCol_COUNT, ImGuiCol_COUNT);
-
-	// ImGuiStyleVar
-	WRAP_ENUM(L, ImGuiStyleVar_Alpha, ImGuiStyleVar_Alpha);
-	WRAP_ENUM(L, ImGuiStyleVar_WindowPadding, ImGuiStyleVar_WindowPadding);
-	WRAP_ENUM(L, ImGuiStyleVar_WindowRounding, ImGuiStyleVar_WindowRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_WindowBorderSize, ImGuiStyleVar_WindowBorderSize);
-	WRAP_ENUM(L, ImGuiStyleVar_WindowMinSize, ImGuiStyleVar_WindowMinSize);
-  	WRAP_ENUM(L, ImGuiStyleVar_WindowTitleAlign, ImGuiStyleVar_WindowTitleAlign);
-	WRAP_ENUM(L, ImGuiStyleVar_ChildRounding, ImGuiStyleVar_ChildRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_ChildBorderSize, ImGuiStyleVar_ChildBorderSize);
-	WRAP_ENUM(L, ImGuiStyleVar_PopupRounding, ImGuiStyleVar_PopupRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_PopupBorderSize, ImGuiStyleVar_PopupBorderSize);
-	WRAP_ENUM(L, ImGuiStyleVar_FramePadding, ImGuiStyleVar_FramePadding);
-	WRAP_ENUM(L, ImGuiStyleVar_FrameRounding, ImGuiStyleVar_FrameRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_FrameBorderSize, ImGuiStyleVar_FrameBorderSize);
-	WRAP_ENUM(L, ImGuiStyleVar_ItemSpacing, ImGuiStyleVar_ItemSpacing);
-	WRAP_ENUM(L, ImGuiStyleVar_ItemInnerSpacing, ImGuiStyleVar_ItemInnerSpacing);
-	WRAP_ENUM(L, ImGuiStyleVar_IndentSpacing, ImGuiStyleVar_IndentSpacing);
-  	WRAP_ENUM(L, ImGuiStyleVar_ScrollbarSize, ImGuiStyleVar_ScrollbarSize);
-  	WRAP_ENUM(L, ImGuiStyleVar_ScrollbarRounding, ImGuiStyleVar_ScrollbarRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_GrabMinSize, ImGuiStyleVar_GrabMinSize);
-  	WRAP_ENUM(L, ImGuiStyleVar_GrabRounding, ImGuiStyleVar_GrabRounding);
-  	WRAP_ENUM(L, ImGuiStyleVar_TabRounding, ImGuiStyleVar_TabRounding);
-	WRAP_ENUM(L, ImGuiStyleVar_ButtonTextAlign, ImGuiStyleVar_ButtonTextAlign);
-  	WRAP_ENUM(L, ImGuiStyleVar_SelectableTextAlign, ImGuiStyleVar_SelectableTextAlign);
-  	WRAP_ENUM(L, ImGuiStyleVar_COUNT, ImGuiStyleVar_COUNT);
-
-	// ImGuiColorEditFlags
-  	WRAP_ENUM(L, ImGuiColorEditFlags_None, ImGuiColorEditFlags_None);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoAlpha, ImGuiColorEditFlags_NoAlpha);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoPicker, ImGuiColorEditFlags_NoPicker);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoOptions, ImGuiColorEditFlags_NoOptions);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoSmallPreview, ImGuiColorEditFlags_NoSmallPreview);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoInputs, ImGuiColorEditFlags_NoInputs);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoTooltip, ImGuiColorEditFlags_NoTooltip);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoLabel, ImGuiColorEditFlags_NoLabel);
-	WRAP_ENUM(L, ImGuiColorEditFlags_NoSidePreview, ImGuiColorEditFlags_NoSidePreview);
-  	WRAP_ENUM(L, ImGuiColorEditFlags_NoDragDrop, ImGuiColorEditFlags_NoDragDrop);
-  	WRAP_ENUM(L, ImGuiColorEditFlags_NoBorder, ImGuiColorEditFlags_NoBorder);
-
-    
-	WRAP_ENUM(L, ImGuiColorEditFlags_AlphaBar, ImGuiColorEditFlags_AlphaBar);
-	WRAP_ENUM(L, ImGuiColorEditFlags_AlphaPreview, ImGuiColorEditFlags_AlphaPreview);
-	WRAP_ENUM(L, ImGuiColorEditFlags_AlphaPreviewHalf, ImGuiColorEditFlags_AlphaPreviewHalf);
-	WRAP_ENUM(L, ImGuiColorEditFlags_HDR, ImGuiColorEditFlags_HDR);
-	WRAP_ENUM(L, ImGuiColorEditFlags_RGB, ImGuiColorEditFlags_RGB);
-	WRAP_ENUM(L, ImGuiColorEditFlags_DisplayRGB, ImGuiColorEditFlags_DisplayRGB);
-	WRAP_ENUM(L, ImGuiColorEditFlags_HSV, ImGuiColorEditFlags_HSV);
-  	WRAP_ENUM(L, ImGuiColorEditFlags_DisplayHSV, ImGuiColorEditFlags_DisplayHSV);
-	WRAP_ENUM(L, ImGuiColorEditFlags_HEX, ImGuiColorEditFlags_HEX);
-	WRAP_ENUM(L, ImGuiColorEditFlags_DisplayHex, ImGuiColorEditFlags_DisplayHex);
-	WRAP_ENUM(L, ImGuiColorEditFlags_Uint8, ImGuiColorEditFlags_Uint8);
-	WRAP_ENUM(L, ImGuiColorEditFlags_Float, ImGuiColorEditFlags_Float);
-	WRAP_ENUM(L, ImGuiColorEditFlags_PickerHueBar, ImGuiColorEditFlags_PickerHueBar);
-	WRAP_ENUM(L, ImGuiColorEditFlags_PickerHueWheel, ImGuiColorEditFlags_PickerHueWheel);
-	WRAP_ENUM(L, ImGuiColorEditFlags_InputRGB, ImGuiColorEditFlags_InputRGB);
-	WRAP_ENUM(L, ImGuiColorEditFlags_InputHSV, ImGuiColorEditFlags_InputHSV);
-	WRAP_ENUM(L, ImGuiColorEditFlags__OptionsDefault, ImGuiColorEditFlags__OptionsDefault);
-
-
-	// ImGuiMouseCursor
-	WRAP_ENUM(L, ImGuiMouseCursor_None, ImGuiMouseCursor_None);
-	WRAP_ENUM(L, ImGuiMouseCursor_Arrow, ImGuiMouseCursor_Arrow);
-	WRAP_ENUM(L, ImGuiMouseCursor_TextInput, ImGuiMouseCursor_TextInput);
-	WRAP_ENUM(L, ImGuiMouseCursor_ResizeAll, ImGuiMouseCursor_ResizeAll);
-	//WRAP_ENUM(L, ImGuiMouseCursor_Move, ImGuiMouseCursor_Move);
-	WRAP_ENUM(L, ImGuiMouseCursor_ResizeNS, ImGuiMouseCursor_ResizeNS);
-	WRAP_ENUM(L, ImGuiMouseCursor_ResizeEW, ImGuiMouseCursor_ResizeEW);
-	WRAP_ENUM(L, ImGuiMouseCursor_ResizeNESW, ImGuiMouseCursor_ResizeNESW);
-	WRAP_ENUM(L, ImGuiMouseCursor_ResizeNWSE, ImGuiMouseCursor_ResizeNWSE);
-	WRAP_ENUM(L, ImGuiMouseCursor_Hand, ImGuiMouseCursor_Hand);
-	WRAP_ENUM(L, ImGuiMouseCursor_NotAllowed, ImGuiMouseCursor_NotAllowed);
-	WRAP_ENUM(L, ImGuiMouseCursor_COUNT, ImGuiMouseCursor_COUNT);
-
-	// ImGuiCond
-	WRAP_ENUM(L, ImGuiCond_Always, ImGuiCond_Always);
-	WRAP_ENUM(L, ImGuiCond_Once, ImGuiCond_Once);
-	WRAP_ENUM(L, ImGuiCond_FirstUseEver, ImGuiCond_FirstUseEver);
-	WRAP_ENUM(L, ImGuiCond_Appearing, ImGuiCond_Appearing);
+    #include "imgui_enum.h"
 
 	//luaL_openlib(L, NULL, imguilib, 1);
 	//luaL_register(L, nullptr, imguilib);
