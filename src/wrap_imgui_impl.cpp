@@ -405,13 +405,23 @@ static int impl_##name(lua_State *L) { \
 	const ImVec4 name((float)i_##name##_x, (float)i_##name##_y, (float)i_##name##_z, (float)i_##name##_w);
 
 #define NUMBER_ARG(name)\
-	lua_Number name = luaL_checknumber(L, arg++);
+	lua_Number name = luaL_checknumber(L, arg++); \
+    if (name == (lua_Number)HUGE_VAL) { \
+        name = (lua_Number)FLT_MAX; \
+    } else if(name == (lua_Number)-HUGE_VAL) { \
+        name = (lua_Number)FLT_MIN; \
+    }
 
 #define OPTIONAL_NUMBER_ARG(name, otherwise)\
 	lua_Number name = otherwise; \
 	if (arg <= max_args) { \
 		name = luaL_checknumber(L, arg++); \
-			}
+	} \
+    if (name == (lua_Number)HUGE_VAL) { \
+        name = (lua_Number)FLT_MAX; \
+    } else if(name == (lua_Number)-HUGE_VAL) { \
+        name = (lua_Number)FLT_MIN; \
+    }
 
 #define FLOAT_POINTER_ARG(name) \
 	float i_##name##_value = (float)luaL_checknumber(L, arg++); \
