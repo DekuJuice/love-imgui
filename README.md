@@ -25,17 +25,41 @@ imgui.Begin("Test Window", true, "ImGuiWindowFlags_AlwaysAutoResize");
 
 It uses imgui 1.77 and is based on LÖVE 11.3.
 
+This version features various bug fixes and includes both the Docking and Tables branches.
+
+## Draw List
+
+Basic support for manipulating the draw list is included.
+
+For example, to add a circle to the window drawlist, 
+
+```
+imgui.AddCircleFilled("window", circx, circy, 5, 0xFFFA9642)
+```
+
+The first argument to every draw list function specifies which built in draw list
+the command is added to.
+
+This can be either:
+```
+"window"
+"foreground"
+"background"
+```
+
+Currently creating and manipulating other draw lists is not supported.
+
 ## Getting Started
 
 Build the project using CMake:
 
-###Windows
+### Windows
 ```
 cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=%CD%/installdir -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
-###Linux
+### Linux
 ```
 cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=$PWD/installdir -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --target install
